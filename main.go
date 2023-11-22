@@ -19,14 +19,16 @@ import (
 	"image"
 	_ "image/png"
 	"log"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/images"
+	"golang.org/x/image/math/f64"
 )
 
 const (
-	screenWidth  = 320
-	screenHeight = 240
+	screenWidth  = 1920
+	screenHeight = 1080
 
 	frameOX     = 0
 	frameOY     = 32
@@ -36,25 +38,73 @@ const (
 )
 
 var (
-	runnerImage *ebiten.Image
+	WarningLog *log.Logger
+	InfoLog    *log.Logger
+	ErrorLog   *log.Logger
 )
 
+func init() {
+	InfoLog = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+	WarningLog = log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile)
+	ErrorLog = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+}
+
 type Game struct {
-	count int
+	character *Character
+}
+
+type Character struct {
+	count    int
+	Position f64.Vec2
+	Image    *ebiten.Image
+}
+
+func NewCharacter() *Character {
+	InfoLog.Println("Loading image")
+	// Decode an image from the image file's byte slice.
+	img, _, err := image.Decode(bytes.NewReader(images.Runner_png))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &Character{
+		count:    0,
+		Position: f64.Vec2{0, 0},
+		Image:    ebiten.NewImageFromImage(img),
+	}
+}
+
+func (c *Character) Move() {
+	if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+		c.count++
+		c.Position[0] -= 1
+	} else if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+		c.count++
+		c.Position[0] += 1
+	} else if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+		c.count++
+		c.Position[1] -= 1
+	} else if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+		c.count++
+		c.Position[1] += 1
+	}
+
+	// c.count = 0
 }
 
 func (g *Game) Update() error {
-	g.count++
+	g.character.Move()
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(-float64(frameWidth)/2, -float64(frameHeight)/2)
-	op.GeoM.Translate(screenWidth/2, screenHeight/2)
-	i := (g.count / 5) % frameCount
+	op.GeoM.Translate(g.character.Position[0], g.character.Position[1])
+	// op.GeoM.Translate(-float64(frameWidth)/2, -float64(frameHeight)/2)
+	// op.GeoM.Translate(screenWidth/2, screenHeight/2)
+	i := (g.character.count / 5) % frameCount
 	sx, sy := frameOX+i*frameWidth, frameOY
-	screen.DrawImage(runnerImage.SubImage(image.Rect(sx, sy, sx+frameWidth, sy+frameHeight)).(*ebiten.Image), op)
+	screen.DrawImage(g.character.Image.SubImage(image.Rect(sx, sy, sx+frameWidth, sy+frameHeight)).(*ebiten.Image), op)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -62,16 +112,16 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func main() {
-	// Decode an image from the image file's byte slice.
-	img, _, err := image.Decode(bytes.NewReader(images.Runner_png))
-	if err != nil {
-		log.Fatal(err)
-	}
-	runnerImage = ebiten.NewImageFromImage(img)
-
-	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
+	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Dungeon")
-	if err := ebiten.RunGame(&Game{}); err != nil {
+
+	InfoLog.Println("Creating character")
+	character := NewCharacter()
+
+	InfoLog.Println("Starting game")
+	if err := ebiten.RunGame(&Game{
+		character: character,
+	}); err != nil {
 		log.Fatal(err)
 	}
 }
