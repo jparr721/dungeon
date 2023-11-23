@@ -65,17 +65,15 @@ func (o *Object) UpdatePosition(dx, dy float64) {
 }
 
 func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
-	// Create a separate GeoM for the rotation
-	rotationGeoM := ebiten.GeoM{}
-	// Translate to the center of the object
-	rotationGeoM.Translate(-float64(o.Image.FrameWidth)/2, -float64(o.Image.FrameHeight)/2)
-	// Apply rotation
-	rotationGeoM.Rotate(o.Rotation)
-	// Translate back to the original position
-	rotationGeoM.Translate(float64(o.Image.FrameWidth)/2, float64(o.Image.FrameHeight)/2)
+	// First, rotate BEFORE any translation has occurred, we MUST create a new geom every time.
+	o.Op.GeoM = ebiten.GeoM{}
 
-	// First, rotate BEFORE any translation has occurred
-	o.Op.GeoM = rotationGeoM
+	// Translate to the center of the object
+	o.Op.GeoM.Translate(-float64(o.Image.FrameWidth)/2, -float64(o.Image.FrameHeight)/2)
+	// Apply rotation
+	o.Op.GeoM.Rotate(o.Rotation)
+	// Translate back to the original position
+	o.Op.GeoM.Translate(float64(o.Image.FrameWidth)/2, float64(o.Image.FrameHeight)/2)
 
 	// Now, apply the camera transformation to this
 	o.Op.GeoM.Concat(*cameraTransform)
@@ -96,10 +94,10 @@ func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 
 // IsCollidingInternal implements the collidable interface for the Object
 func (o *Object) IsCollidingInternal(b Collidable) bool {
-	return o.AABB.IsInternallyColliding2D(b.BoundingBox())
+	return o.IsInternallyColliding2D(b.BoundingBox())
 }
 
 // IsCollidingExternal implements the collidable interface for the Object
 func (o *Object) IsCollidingExternal(b Collidable) bool {
-	return o.AABB.IsExternallyColliding2D(b.BoundingBox())
+	return o.IsExternallyColliding2D(b.BoundingBox())
 }
