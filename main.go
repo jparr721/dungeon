@@ -1,28 +1,19 @@
-// Copyright 2018 The Ebiten Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package main
 
 import (
 	"bytes"
+	"fmt"
 	"image"
+	"image/color"
 	_ "image/png"
 	"log"
+	"math"
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/images"
+	"go.uber.org/zap"
 	"golang.org/x/image/math/f64"
 )
 
@@ -37,30 +28,113 @@ const (
 	frameCount  = 8
 )
 
-var (
-	WarningLog *log.Logger
-	InfoLog    *log.Logger
-	ErrorLog   *log.Logger
-)
-
 func init() {
-	InfoLog = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	WarningLog = log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile)
-	ErrorLog = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+	logger := zap.Must(zap.NewDevelopment())
+	if os.Getenv("APP_ENV") == "release" {
+		logger = zap.Must(zap.NewProduction())
+	}
+	zap.ReplaceGlobals(logger)
+}
+
+type AABB struct {
+	Min f64.Vec2
+	Max f64.Vec2
+}
+
+func NewAABB(img *ebiten.Image) *AABB {
+	bounds := img.Bounds()
+	minBounds := bounds.Min
+	maxBounds := bounds.Max
+	return &AABB{
+		Min: f64.Vec2{float64(minBounds.X), float64(minBounds.Y)},
+		Max: f64.Vec2{float64(maxBounds.X), float64(maxBounds.Y)},
+	}
+}
+
+func (a *AABB) IsColliding2D(b *AABB) bool {
+	if a.Max[0] < b.Min[0] || a.Min[0] > b.Max[0] {
+		return false
+	}
+
+	if a.Max[1] < b.Min[1] || a.Min[1] > b.Max[1] {
+		return false
+	}
+
+	return true
+}
+
+type Collidable interface {
+	// IsCollidingInternal checks if an object, which exists WITHIN a bounding volume, is coming near
+	// the edge of the shape where it would break out. This is for things like levels.
+	IsCollidingInternal(b *Collidable) bool
+
+	// IsCollidingExternal check if an ojbect, which exists OUTSIDE of a bounding volume, is going
+	// to clip inside of the edge of the shape. This is for basically everything else.
+	IsCollidingExternal(b *Collidable) bool
 }
 
 type Game struct {
 	character *Character
+	camera    *Camera
+}
+
+type Camera struct {
+	ViewPort     f64.Vec2
+	Position     f64.Vec2
+	ZoomFactor   float64
+	ZoomFactorTo float64
+	Rotation     float64
+}
+
+func (c *Camera) String() string {
+	return fmt.Sprintf(
+		"T: %.1f, R: %.2f, S: %.2f",
+		c.Position, c.Rotation, c.ZoomFactor,
+	)
+}
+
+func (c *Camera) viewportCenter() f64.Vec2 {
+	return f64.Vec2{
+		c.ViewPort[0] * 0.5,
+		c.ViewPort[1] * 0.5,
+	}
+}
+
+func (c *Camera) worldMatrix() ebiten.GeoM {
+	m := ebiten.GeoM{}
+	m.Translate(-c.Position[0], -c.Position[1])
+	// We want to scale and rotate around center of image / screen
+	m.Translate(-c.viewportCenter()[0], -c.viewportCenter()[1])
+	m.Scale(
+		math.Pow(1.01, float64(c.ZoomFactor)),
+		math.Pow(1.01, float64(c.ZoomFactor)),
+	)
+	m.Rotate(float64(c.Rotation) * 2 * math.Pi / 360)
+	m.Translate(c.viewportCenter()[0], c.viewportCenter()[1])
+	return m
+}
+
+func (c *Camera) ScreenToWorld(posX, posY int) (float64, float64) {
+	inverseMatrix := c.worldMatrix()
+	if inverseMatrix.IsInvertible() {
+		inverseMatrix.Invert()
+		return inverseMatrix.Apply(float64(posX), float64(posY))
+	} else {
+		// When scaling it can happened that matrix is not invertable
+		return math.NaN(), math.NaN()
+	}
 }
 
 type Character struct {
 	count    int
 	Position f64.Vec2
 	Image    *ebiten.Image
+
+	movementSpeed float64
 }
 
 func NewCharacter() *Character {
-	InfoLog.Println("Loading image")
+	zap.L().Info("Loading character")
 	// Decode an image from the image file's byte slice.
 	img, _, err := image.Decode(bytes.NewReader(images.Runner_png))
 	if err != nil {
@@ -68,43 +142,109 @@ func NewCharacter() *Character {
 	}
 
 	return &Character{
-		count:    0,
-		Position: f64.Vec2{0, 0},
-		Image:    ebiten.NewImageFromImage(img),
+		count:         0,
+		Position:      f64.Vec2{screenWidth / 4, screenHeight / 4},
+		Image:         ebiten.NewImageFromImage(img),
+		movementSpeed: 2.0,
 	}
 }
 
 func (c *Character) Move() {
+	dx, dy := c.handleKeyPress()
+
+	if dx != 0 || dy != 0 {
+		if c.Position[0]+dx < 0 || c.Position[0]+dx > screenWidth {
+			dx = 0
+		}
+
+		if c.Position[1]+dy < 0 || c.Position[1]+dy > screenHeight {
+			dy = 0
+		}
+
+		c.count++
+		c.Position[0] += dx
+		c.Position[1] += dy
+	} else {
+		c.count = 0
+	}
+}
+
+func (c *Character) handleCollision(collisionObjects []Collidable) {
+}
+
+func (c *Character) handleKeyPress() (float64, float64) {
+	var dx, dy float64
+
 	if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		c.count++
-		c.Position[0] -= 1
+		dx = -1
 	} else if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		c.count++
-		c.Position[0] += 1
-	} else if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-		c.count++
-		c.Position[1] -= 1
-	} else if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-		c.count++
-		c.Position[1] += 1
+		dx = 1
 	}
 
-	// c.count = 0
+	if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+		dy = -1
+	} else if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+		dy = 1
+	}
+
+	return dx * c.movementSpeed, dy * c.movementSpeed
 }
 
 func (g *Game) Update() error {
 	g.character.Move()
+
+	// Camera is always centered on the main character
+	g.camera.Position = f64.Vec2{
+		g.character.Position[0] - screenWidth/4,
+		g.character.Position[1] - screenHeight/4,
+	}
+
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	op := &ebiten.DrawImageOptions{}
+	// Get the camera matrix transform
+	cameraTransform := g.camera.worldMatrix()
+
+	bg := ebiten.NewImage(1000, 500)
+	bg.Fill(color.White)
+
+	op := &ebiten.DrawImageOptions{
+		GeoM: cameraTransform,
+	}
+	op.GeoM.Translate(screenWidth/4, screenHeight/4)
+	screen.DrawImage(bg, op)
+
+	// Draw the character and translate them to whatever their current position is
+	op = &ebiten.DrawImageOptions{
+		GeoM: cameraTransform,
+	}
 	op.GeoM.Translate(g.character.Position[0], g.character.Position[1])
-	// op.GeoM.Translate(-float64(frameWidth)/2, -float64(frameHeight)/2)
-	// op.GeoM.Translate(screenWidth/2, screenHeight/2)
+
+	// Move the character to the start of their frame
+	op.GeoM.Translate(-float64(frameWidth)/2, -float64(frameHeight)/2)
+
+	// Scale by 2 since it looks kind of small
+	op.GeoM.Scale(2.0, 2.0)
+
+	// This just chooses the character frame from the sprite sheet. We divide by 5 so that way the transition
+	// between animation frames is less intense (basically going at 5 frames per second).
 	i := (g.character.count / 5) % frameCount
 	sx, sy := frameOX+i*frameWidth, frameOY
+
 	screen.DrawImage(g.character.Image.SubImage(image.Rect(sx, sy, sx+frameWidth, sy+frameHeight)).(*ebiten.Image), op)
+
+	ebitenutil.DebugPrintAt(
+		screen,
+		fmt.Sprintf("Pos x: %.2f, y: %.2f", g.character.Position[0], g.character.Position[1]),
+		0, screenHeight-32,
+	)
+
+	ebitenutil.DebugPrintAt(
+		screen,
+		fmt.Sprintf("Camera %s", g.camera.String()),
+		0, screenHeight-64,
+	)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -115,12 +255,12 @@ func main() {
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Dungeon")
 
-	InfoLog.Println("Creating character")
 	character := NewCharacter()
 
-	InfoLog.Println("Starting game")
+	zap.L().Info("Starting game")
 	if err := ebiten.RunGame(&Game{
 		character: character,
+		camera:    &Camera{ViewPort: f64.Vec2{screenWidth, screenHeight}},
 	}); err != nil {
 		log.Fatal(err)
 	}
