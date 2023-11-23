@@ -30,6 +30,7 @@ func (g *Game) Update() error {
 	return nil
 }
 
+// Draw is the main draw function for the game. It handles drawing all Object types to the screen.
 func (g *Game) Draw(screen *ebiten.Image) {
 	// Get the Camera matrix transform
 	cameraTransform := g.Camera.worldMatrix()

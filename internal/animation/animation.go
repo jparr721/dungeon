@@ -39,11 +39,14 @@ func NewImageFromFile(filename string, frameCount, frameOX, frameOY, frameWidth,
 	if err != nil {
 		zap.L().Fatal("Failed to open image file", zap.Error(err))
 	}
-	defer file.Close()
 
 	img, _, err := image.Decode(file)
 	if err != nil {
 		zap.L().Fatal("Failed to decode image", zap.Error(err))
+	}
+
+	if err := file.Close(); err != nil {
+		zap.L().Fatal("Failed to close image file", zap.Error(err))
 	}
 
 	return &Image{
