@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	"dungeon/internal/character"
 	"fmt"
 	"image"
 	"image/color"
@@ -12,7 +12,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/examples/resources/images"
 	"go.uber.org/zap"
 	"golang.org/x/image/math/f64"
 )
@@ -36,45 +35,8 @@ func init() {
 	zap.ReplaceGlobals(logger)
 }
 
-type AABB struct {
-	Min f64.Vec2
-	Max f64.Vec2
-}
-
-func NewAABB(img *ebiten.Image) *AABB {
-	bounds := img.Bounds()
-	minBounds := bounds.Min
-	maxBounds := bounds.Max
-	return &AABB{
-		Min: f64.Vec2{float64(minBounds.X), float64(minBounds.Y)},
-		Max: f64.Vec2{float64(maxBounds.X), float64(maxBounds.Y)},
-	}
-}
-
-func (a *AABB) IsColliding2D(b *AABB) bool {
-	if a.Max[0] < b.Min[0] || a.Min[0] > b.Max[0] {
-		return false
-	}
-
-	if a.Max[1] < b.Min[1] || a.Min[1] > b.Max[1] {
-		return false
-	}
-
-	return true
-}
-
-type Collidable interface {
-	// IsCollidingInternal checks if an object, which exists WITHIN a bounding volume, is coming near
-	// the edge of the shape where it would break out. This is for things like levels.
-	IsCollidingInternal(b *Collidable) bool
-
-	// IsCollidingExternal check if an ojbect, which exists OUTSIDE of a bounding volume, is going
-	// to clip inside of the edge of the shape. This is for basically everything else.
-	IsCollidingExternal(b *Collidable) bool
-}
-
 type Game struct {
-	character *Character
+	character *character.Character
 	camera    *Camera
 }
 
@@ -125,71 +87,6 @@ func (c *Camera) ScreenToWorld(posX, posY int) (float64, float64) {
 	}
 }
 
-type Character struct {
-	count    int
-	Position f64.Vec2
-	Image    *ebiten.Image
-
-	movementSpeed float64
-}
-
-func NewCharacter() *Character {
-	zap.L().Info("Loading character")
-	// Decode an image from the image file's byte slice.
-	img, _, err := image.Decode(bytes.NewReader(images.Runner_png))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return &Character{
-		count:         0,
-		Position:      f64.Vec2{screenWidth / 4, screenHeight / 4},
-		Image:         ebiten.NewImageFromImage(img),
-		movementSpeed: 2.0,
-	}
-}
-
-func (c *Character) Move() {
-	dx, dy := c.handleKeyPress()
-
-	if dx != 0 || dy != 0 {
-		if c.Position[0]+dx < 0 || c.Position[0]+dx > screenWidth {
-			dx = 0
-		}
-
-		if c.Position[1]+dy < 0 || c.Position[1]+dy > screenHeight {
-			dy = 0
-		}
-
-		c.count++
-		c.Position[0] += dx
-		c.Position[1] += dy
-	} else {
-		c.count = 0
-	}
-}
-
-func (c *Character) handleCollision(collisionObjects []Collidable) {
-}
-
-func (c *Character) handleKeyPress() (float64, float64) {
-	var dx, dy float64
-
-	if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		dx = -1
-	} else if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		dx = 1
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-		dy = -1
-	} else if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-		dy = 1
-	}
-
-	return dx * c.movementSpeed, dy * c.movementSpeed
-}
-
 func (g *Game) Update() error {
 	g.character.Move()
 
@@ -229,10 +126,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// This just chooses the character frame from the sprite sheet. We divide by 5 so that way the transition
 	// between animation frames is less intense (basically going at 5 frames per second).
-	i := (g.character.count / 5) % frameCount
+	i := (g.character.Count / 5) % frameCount
 	sx, sy := frameOX+i*frameWidth, frameOY
 
 	screen.DrawImage(g.character.Image.SubImage(image.Rect(sx, sy, sx+frameWidth, sy+frameHeight)).(*ebiten.Image), op)
+
+	ebitenutil.DebugPrint(screen,
+		fmt.Sprintf("TPS: %0.2f, FPS: %0.2f", ebiten.ActualTPS(), ebiten.ActualFPS()),
+	)
 
 	ebitenutil.DebugPrintAt(
 		screen,
@@ -255,7 +156,7 @@ func main() {
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Dungeon")
 
-	character := NewCharacter()
+	character := character.NewCharacter(screenWidth, screenHeight)
 
 	zap.L().Info("Starting game")
 	if err := ebiten.RunGame(&Game{
