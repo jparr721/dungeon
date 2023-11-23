@@ -84,23 +84,12 @@ func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 	// Apply the camera transform
 	o.Op.GeoM = *cameraTransform
 
-	// Move to origin of the image of the object
-	//o.Op.GeoM.Translate()
-
-	//o.Op.GeoM.Translate(o.Center[0], o.Center[1])
-
-	// Rotate the object
+	// Rotate the object at camera origin
 	o.Op.GeoM.Rotate(o.Rotation)
 
-	// Move the object to the start of their frame
-	//o.Op.GeoM.Translate(float64(-o.Image.FrameWidth/2), float64(-o.Image.FrameHeight/2))
-
-	// Translate the object to their current position
-	o.Op.GeoM.Translate(o.Position[0], o.Position[1])
-
-	//o.Op.GeoM.Translate(o.Position[0], o.Position[1])
-
-	//o.Op.GeoM.Scale(2.0, 2.0)
+	// Translate the object to its position
+	o.Op.GeoM.Translate(o.Center[0], o.Center[1])
+	o.Op.GeoM.Translate(-float64(o.Image.FrameWidth/2), -float64(o.Image.FrameHeight/2))
 
 	// This just chooses the character frame from the sprite sheet. We divide by 5 so that way the transition
 	// between animation frames is less intense (basically going at 5 frames per second).
