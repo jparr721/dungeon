@@ -5,7 +5,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/image/math/f64"
 	"image"
-	"math"
 )
 
 type Collidable interface {
@@ -65,31 +64,24 @@ func (o *Object) UpdatePosition(dx, dy float64) {
 	o.AABB.UpdatePosition(dx, dy)
 }
 
-// UpdateRotation updates the rotation of the object and its corresponding bounding box by rotation the points
-// around the object center and then updating the bounding box with those new points.
-func (o *Object) UpdateRotation() {
-	// Rotate the points around the center of the object
-	rotx := o.Center[0] + math.Cos(o.Rotation)*(o.Position[0]-o.Center[0]) - math.Sin(o.Rotation)*(o.Position[1]-o.Center[1])
-	roty := o.Center[1] + math.Sin(o.Rotation)*(o.Position[0]-o.Center[0]) + math.Cos(o.Rotation)*(o.Position[1]-o.Center[1])
-
-	// Update the position of the object
-	o.Position[0] = rotx
-	o.Position[1] = roty
-
-	// Update the position of the bounding box
-	//o.AABB.UpdatePosition(o.Position)
-}
-
 func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
-	// Apply the camera transform
-	o.Op.GeoM = *cameraTransform
+	// Create a separate GeoM for the rotation
+	rotationGeoM := ebiten.GeoM{}
+	// Translate to the center of the object
+	rotationGeoM.Translate(-float64(o.Image.FrameWidth)/2, -float64(o.Image.FrameHeight)/2)
+	// Apply rotation
+	rotationGeoM.Rotate(o.Rotation)
+	// Translate back to the original position
+	rotationGeoM.Translate(float64(o.Image.FrameWidth)/2, float64(o.Image.FrameHeight)/2)
 
-	// Rotate the object at camera origin
-	o.Op.GeoM.Rotate(o.Rotation)
+	// First, rotate BEFORE any translation has occurred
+	o.Op.GeoM = rotationGeoM
 
-	// Translate the object to its position
-	o.Op.GeoM.Translate(o.Center[0], o.Center[1])
-	o.Op.GeoM.Translate(-float64(o.Image.FrameWidth/2), -float64(o.Image.FrameHeight/2))
+	// Now, apply the camera transformation to this
+	o.Op.GeoM.Concat(*cameraTransform)
+
+	// Move to the object position including any camera offset
+	o.Op.GeoM.Translate(o.Position[0], o.Position[1])
 
 	// This just chooses the character frame from the sprite sheet. We divide by 5 so that way the transition
 	// between animation frames is less intense (basically going at 5 frames per second).
