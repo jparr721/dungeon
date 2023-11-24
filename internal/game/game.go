@@ -1,6 +1,7 @@
 package game
 
 import (
+	"dungeon/internal/gfx"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -8,14 +9,10 @@ import (
 	"image/color"
 )
 
-const (
-	ScreenWidth  = 1920
-	ScreenHeight = 1080
-)
-
 type Game struct {
 	PlayerCharacter *PlayerCharacter
 	Camera          *Camera
+	CurrentLevel    *Level
 }
 
 func (g *Game) Update() error {
@@ -23,8 +20,8 @@ func (g *Game) Update() error {
 
 	// Camera is always centered on the main PlayerCharacter
 	g.Camera.Position = f64.Vec2{
-		g.PlayerCharacter.Position[0] - ScreenWidth/2,
-		g.PlayerCharacter.Position[1] - ScreenHeight/2,
+		g.PlayerCharacter.Position[0] - gfx.ScreenWidth/2,
+		g.PlayerCharacter.Position[1] - gfx.ScreenHeight/2,
 	}
 
 	return nil
@@ -41,8 +38,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{
 		GeoM: cameraTransform,
 	}
-	op.GeoM.Translate(ScreenWidth/2-500, ScreenHeight/2-250)
+	op.GeoM.Translate(gfx.ScreenWidth/2-500, gfx.ScreenHeight/2-250)
 	screen.DrawImage(bg, op)
+
+	g.CurrentLevel.Render(screen, &cameraTransform)
 
 	// Draw the PlayerCharacter and translate them to whatever their current position is
 	g.PlayerCharacter.Render(screen, &cameraTransform)
@@ -59,28 +58,28 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			g.PlayerCharacter.Position[1],
 			g.PlayerCharacter.Center[0],
 			g.PlayerCharacter.Center[1]),
-		0, ScreenHeight-32,
+		0, gfx.ScreenHeight-32,
 	)
 
 	ebitenutil.DebugPrintAt(
 		screen,
 		fmt.Sprintf("Camera %s", g.Camera.String()),
-		0, ScreenHeight-64,
+		0, gfx.ScreenHeight-64,
 	)
 
 	ebitenutil.DebugPrintAt(
 		screen,
 		fmt.Sprintf("Player Rotation %.2f", g.PlayerCharacter.Rotation),
-		0, ScreenHeight-96,
+		0, gfx.ScreenHeight-96,
 	)
 
 	ebitenutil.DebugPrintAt(
 		screen,
 		fmt.Sprintf("Bounding Box %s", g.PlayerCharacter.AABB.String()),
-		0, ScreenHeight-108,
+		0, gfx.ScreenHeight-108,
 	)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return ScreenWidth, ScreenHeight
+	return gfx.ScreenWidth, gfx.ScreenHeight
 }
