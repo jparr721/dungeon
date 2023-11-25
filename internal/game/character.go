@@ -16,7 +16,11 @@ type PlayerCharacter struct {
 
 func NewPlayerCharacter(screenWidth, screenHeight int) *PlayerCharacter {
 	zap.L().Info("Loading player character")
-	pc := physics.NewObjectFromImage(animation.Runner)
+	pc := physics.NewObjectFromImages(map[physics.Orientation]*animation.Image{
+		physics.Front: animation.WizardFront,
+		physics.Left:  animation.WizardSide,
+		physics.Right: animation.WizardSide,
+	})
 	pc.UpdatePosition(float64(screenWidth/2), float64(screenHeight/2))
 	return &PlayerCharacter{pc}
 }
@@ -51,16 +55,20 @@ func (c *PlayerCharacter) handleMouseMovement(camera *Camera) {
 func (c *PlayerCharacter) handleKeyPress() (float64, float64) {
 	var dx, dy float64
 
-	if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		dx = -1
-	} else if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		dx = 1
-	}
-
 	if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
 		dy = -1
+		c.Orientation = physics.Front
 	} else if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
 		dy = 1
+		c.Orientation = physics.Front
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+		dx = -1
+		c.Orientation = physics.Left
+	} else if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+		dx = 1
+		c.Orientation = physics.Right
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyShiftLeft) {
@@ -76,5 +84,16 @@ func (c *PlayerCharacter) handleKeyPress() (float64, float64) {
 // of the vector. So we compute the angle between the vector and the x-axis, then rotate.
 func (c *PlayerCharacter) calculateXAxisAngleFromVec(vec f64.Vec2) float64 {
 	// Rotate the player
-	return math.Atan2(vec[1], vec[0])
+	angle := math.Atan2(vec[1], vec[0])
+
+	// Clip the angle to always be between -90 degrees and 90 degrees in radians if facing right
+	if angle < -math.Pi/2 {
+		angle = -math.Pi / 2
+	}
+
+	if angle > math.Pi/2 {
+		angle = math.Pi / 2
+	}
+
+	return angle
 }

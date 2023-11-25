@@ -2,6 +2,7 @@ package animation
 
 import (
 	"bytes"
+	"dungeon/assets"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/images"
@@ -14,11 +15,15 @@ import (
 // Globally defined images
 var (
 	// Runner image
-	Runner *Image
+	Runner      *Image
+	WizardFront *Image
+	WizardSide  *Image
 )
 
 func init() {
 	Runner = NewImageFromImage(images.Runner_png, 8, 0, 32, 32, 32)
+	WizardFront = NewImageFromImage(assets.Wizard_Sheet, 3, 0, 24, 24, 24)
+	WizardSide = NewImageFromImage(assets.Wizard_Sheet, 3, 24, 24, 24, 24)
 }
 
 type Image struct {

@@ -19,10 +19,35 @@ type Collidable interface {
 	BoundingBox() *AABB
 }
 
+// Orientation enum representing the orientation of an object (Front, Left, Right)
+type Orientation int
+
+const (
+	Front Orientation = iota
+	Left
+	Right
+	All
+)
+
+func (o Orientation) String() string {
+	switch o {
+	case Front:
+		return "Front"
+	case Left:
+		return "Left"
+	case Right:
+		return "Right"
+	case All:
+		return "All"
+	default:
+		return "Unknown"
+	}
+}
+
 // Object represents any game object which can be interactive
 type Object struct {
-	// The image representing the currently loaded object
-	Image *animation.Image
+	// The images representing the currently loaded object and its various orientations
+	Image map[Orientation]*animation.Image
 
 	// The image options for this object
 	Op *ebiten.DrawImageOptions
@@ -42,17 +67,39 @@ type Object struct {
 	// The count of the animation frame
 	Count int
 
+	// The current orientation of the image
+	Orientation Orientation
+
 	*AABB
 }
 
 // NewObjectFromImage creates a new object from an image instance.
+
 func NewObjectFromImage(image *animation.Image) *Object {
+	return NewObjectFromImages(map[Orientation]*animation.Image{All: image})
+}
+
+func NewObjectFromImages(images map[Orientation]*animation.Image) *Object {
+	var aabb *AABB
+	var center f64.Vec2
+	var orientation Orientation
+	if _, ok := images[All]; !ok {
+		aabb = NewAABB(f64.Vec2{0, 0}, images[Front])
+		center = f64.Vec2{float64(images[Front].FrameWidth / 2), float64(images[Front].FrameHeight / 2)}
+		orientation = Front
+	} else {
+		aabb = NewAABB(f64.Vec2{0, 0}, images[All])
+		center = f64.Vec2{float64(images[All].FrameWidth / 2), float64(images[All].FrameHeight / 2)}
+		orientation = All
+	}
+
 	return &Object{
-		Image:    image,
-		Op:       &ebiten.DrawImageOptions{},
-		Center:   f64.Vec2{float64(image.FrameWidth / 2), float64(image.FrameHeight / 2)},
-		Velocity: f64.Vec2{1.0, 1.0},
-		AABB:     NewAABB(f64.Vec2{0, 0}, image),
+		Image:       images,
+		Op:          &ebiten.DrawImageOptions{},
+		Center:      center,
+		Velocity:    f64.Vec2{1.0, 1.0},
+		AABB:        aabb,
+		Orientation: orientation,
 	}
 }
 
@@ -65,15 +112,31 @@ func (o *Object) UpdatePosition(dx, dy float64) {
 }
 
 func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
+	img := o.Image[o.Orientation]
+
+	// First, quick check if an image for "All" is set, if it is, always use that
+	if img == nil {
+		img = o.Image[All]
+	}
+
 	// First, rotate BEFORE any translation has occurred, we MUST create a new geom every time.
 	o.Op.GeoM = ebiten.GeoM{}
 
+	// If the orientation is left, flip the image over the axis
+	if o.Orientation == Left {
+		o.Op.GeoM.Scale(-1.0, 1.0)
+		o.Op.GeoM.Translate(float64(img.FrameWidth), 0)
+	}
+
 	// Translate to the center of the object
-	o.Op.GeoM.Translate(-float64(o.Image.FrameWidth)/2, -float64(o.Image.FrameHeight)/2)
+	o.Op.GeoM.Translate(-float64(img.FrameWidth)/2, -float64(img.FrameHeight)/2)
 	// Apply rotation
 	o.Op.GeoM.Rotate(o.Rotation)
 	// Translate back to the original position
-	o.Op.GeoM.Translate(float64(o.Image.FrameWidth)/2, float64(o.Image.FrameHeight)/2)
+	o.Op.GeoM.Translate(float64(img.FrameWidth)/2, float64(img.FrameHeight)/2)
+
+	// Scale asset after rotation
+	o.Op.GeoM.Scale(2.0, 2.0)
 
 	// Now, apply the camera transformation to this
 	o.Op.GeoM.Concat(*cameraTransform)
@@ -82,11 +145,12 @@ func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 	o.Op.GeoM.Translate(o.Position[0], o.Position[1])
 
 	// This just chooses the character frame from the sprite sheet. We divide by 5 so that way the transition
-	// between animation frames is less intense (basically going at 5 frames per second).
-	i := (o.Count / 5) % o.Image.FrameCount
-	sx, sy := o.Image.FrameOX+i*o.Image.FrameWidth, o.Image.FrameOY
+	// between animation frames is less intense.
+	i := (o.Count / 10) % img.FrameCount
+	//sx, sy := img.FrameOX+i*img.FrameWidth, img.FrameOY
+	sx, sy := img.FrameOX, img.FrameOY+i*img.FrameHeight
 
-	screen.DrawImage(o.Image.SubImage(image.Rect(sx, sy, sx+o.Image.FrameWidth, sy+o.Image.FrameHeight)).(*ebiten.Image), o.Op)
+	screen.DrawImage(img.SubImage(image.Rect(sx, sy, sx+img.FrameWidth, sy+img.FrameHeight)).(*ebiten.Image), o.Op)
 
 	// Draw the player's bounding box
 	o.AABB.Render(screen, &o.Op.GeoM)

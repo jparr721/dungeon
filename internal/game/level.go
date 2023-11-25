@@ -77,7 +77,7 @@ type Level struct {
 func (l *Level) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 	tileXCount := 25
 	tileSize := 16
-	worldSizeX := 1920 / tileSize
+	worldSizeX := (1000 + tileSize) / tileSize
 
 	startX := float64(gfx.ScreenWidth/2) - 500
 	startY := float64(gfx.ScreenHeight/2) - 250
