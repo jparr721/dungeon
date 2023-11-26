@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"golang.org/x/image/math/f64"
 	"image/color"
+	"math"
 )
 
 type Game struct {
@@ -74,7 +75,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	ebitenutil.DebugPrintAt(
 		screen,
-		fmt.Sprintf("Player Rotation %.2f", g.PlayerCharacter.Rotation),
+		fmt.Sprintf("Player Rotation (Degrees) %.2f (Radians) %.2f", g.PlayerCharacter.Rotation*180/math.Pi, g.PlayerCharacter.Rotation),
 		0, gfx.ScreenHeight-96,
 	)
 

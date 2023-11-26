@@ -18,6 +18,7 @@ func NewPlayerCharacter(screenWidth, screenHeight int) *PlayerCharacter {
 	zap.L().Info("Loading player character")
 	pc := physics.NewObjectFromImages(map[physics.Orientation]*animation.Image{
 		physics.Front: animation.WizardFront,
+		physics.Back:  animation.WizardFront,
 		physics.Left:  animation.WizardSide,
 		physics.Right: animation.WizardSide,
 	})
@@ -50,6 +51,18 @@ func (c *PlayerCharacter) handleMouseMovement(camera *Camera) {
 		my - c.Position[1],
 	}
 	c.Rotation = c.calculateXAxisAngleFromVec(normal)
+
+	rotDeg := c.Rotation * 180 / math.Pi
+
+	if rotDeg >= -45 && rotDeg <= 45 {
+		c.Orientation = physics.Right
+	} else if rotDeg >= 45 && rotDeg <= 135 {
+		c.Orientation = physics.Front
+	} else if rotDeg >= 135 || rotDeg <= -135 {
+		c.Orientation = physics.Left
+	} else if rotDeg >= -135 && rotDeg <= -45 {
+		c.Orientation = physics.Back
+	}
 }
 
 func (c *PlayerCharacter) handleKeyPress() (float64, float64) {
@@ -57,18 +70,14 @@ func (c *PlayerCharacter) handleKeyPress() (float64, float64) {
 
 	if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
 		dy = -1
-		c.Orientation = physics.Front
 	} else if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
 		dy = 1
-		c.Orientation = physics.Front
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
 		dx = -1
-		c.Orientation = physics.Left
 	} else if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
 		dx = 1
-		c.Orientation = physics.Right
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyShiftLeft) {
@@ -83,17 +92,15 @@ func (c *PlayerCharacter) handleKeyPress() (float64, float64) {
 // calculateXAxisAngleFromVec calculates the roation of the player to face in the direction
 // of the vector. So we compute the angle between the vector and the x-axis, then rotate.
 func (c *PlayerCharacter) calculateXAxisAngleFromVec(vec f64.Vec2) float64 {
+	// Normalize the vector
+	// TODO: Make this a helper
+	vec = f64.Vec2{
+		vec[0] / math.Sqrt(vec[0]*vec[0]+vec[1]*vec[1]),
+		vec[1] / math.Sqrt(vec[0]*vec[0]+vec[1]*vec[1]),
+	}
+
 	// Rotate the player
 	angle := math.Atan2(vec[1], vec[0])
-
-	// Clip the angle to always be between -90 degrees and 90 degrees in radians if facing right
-	if angle < -math.Pi/2 {
-		angle = -math.Pi / 2
-	}
-
-	if angle > math.Pi/2 {
-		angle = math.Pi / 2
-	}
 
 	return angle
 }

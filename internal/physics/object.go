@@ -24,6 +24,7 @@ type Orientation int
 
 const (
 	Front Orientation = iota
+	Back
 	Left
 	Right
 	All
@@ -33,6 +34,8 @@ func (o Orientation) String() string {
 	switch o {
 	case Front:
 		return "Front"
+	case Back:
+		return "Back"
 	case Left:
 		return "Left"
 	case Right:
@@ -122,8 +125,15 @@ func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 	// First, rotate BEFORE any translation has occurred, we MUST create a new geom every time.
 	o.Op.GeoM = ebiten.GeoM{}
 
-	// If the orientation is left, flip the image over the axis
 	if o.Orientation == Left {
+		//o.Op.GeoM.Scale(-1.0, 1.0)
+		//o.Op.GeoM.Translate(float64(img.FrameWidth), 0)
+
+		o.Op.GeoM.Scale(1.0, -1.0)
+		o.Op.GeoM.Translate(0, float64(img.FrameHeight))
+	}
+
+	if o.Orientation == Back {
 		o.Op.GeoM.Scale(-1.0, 1.0)
 		o.Op.GeoM.Translate(float64(img.FrameWidth), 0)
 	}
