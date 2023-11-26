@@ -6,5 +6,5 @@ import (
 
 var (
 	//go:embed Wizard_Sheet.png
-	Wizard_Sheet []byte
+	WizardSheet []byte
 )

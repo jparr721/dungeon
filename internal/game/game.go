@@ -32,15 +32,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Get the Camera matrix transform
 	cameraTransform := g.Camera.worldMatrix()
 
+	// TODO: This whole draw block should be removed and just swapped in for the background from the level.go file
 	bg := ebiten.NewImage(1000, 500)
 	bg.Fill(color.White)
 
+	// This code essentially applies the camera transform so that way it stays correct with respect to the user
 	op := &ebiten.DrawImageOptions{
 		GeoM: cameraTransform,
 	}
+	// Now, translate to the center of the screen. But all images start at the top-left, so we move it an additional
+	// width / 2 and height / 2 to get it to the center of the screen.
 	op.GeoM.Translate(gfx.ScreenWidth/2-500, gfx.ScreenHeight/2-250)
 	screen.DrawImage(bg, op)
 
+	// Render the level before the character otherwise it'll draw overtop of it.
 	g.CurrentLevel.Render(screen, &cameraTransform)
 
 	// Draw the PlayerCharacter and translate them to whatever their current position is

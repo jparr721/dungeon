@@ -35,8 +35,8 @@ func (c *Camera) worldMatrix() ebiten.GeoM {
 	// We want to scale and rotate around center of image / screen
 	m.Translate(-c.viewportCenter()[0], -c.viewportCenter()[1])
 	m.Scale(
-		math.Pow(1.01, float64(c.ZoomFactor)),
-		math.Pow(1.01, float64(c.ZoomFactor)),
+		math.Pow(1.01, c.ZoomFactor),
+		math.Pow(1.01, c.ZoomFactor),
 	)
 	m.Rotate(float64(c.Rotation) * 2 * math.Pi / 360)
 	m.Translate(c.viewportCenter()[0], c.viewportCenter()[1])

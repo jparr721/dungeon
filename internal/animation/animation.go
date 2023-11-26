@@ -22,8 +22,8 @@ var (
 
 func init() {
 	Runner = NewImageFromImage(images.Runner_png, 8, 0, 32, 32, 32)
-	WizardFront = NewImageFromImage(assets.Wizard_Sheet, 3, 0, 24, 24, 24)
-	WizardSide = NewImageFromImage(assets.Wizard_Sheet, 3, 24, 24, 24, 24)
+	WizardFront = NewImageFromImage(assets.WizardSheet, 3, 0, 24, 24, 24)
+	WizardSide = NewImageFromImage(assets.WizardSheet, 3, 24, 24, 24, 24)
 }
 
 type Image struct {
