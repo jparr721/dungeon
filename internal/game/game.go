@@ -2,10 +2,10 @@ package game
 
 import (
 	"dungeon/internal/gfx"
+	"dungeon/internal/numerics"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"golang.org/x/image/math/f64"
 	"image/color"
 	"math"
 )
@@ -20,10 +20,10 @@ func (g *Game) Update() error {
 	g.PlayerCharacter.Move(g.Camera)
 
 	// Camera is always centered on the main PlayerCharacter
-	g.Camera.Position = f64.Vec2{
-		g.PlayerCharacter.Position[0] - gfx.ScreenWidth/2,
-		g.PlayerCharacter.Position[1] - gfx.ScreenHeight/2,
-	}
+	g.Camera.Position = numerics.NewVec2(
+		g.PlayerCharacter.Position.X()-gfx.ScreenWidth/2,
+		g.PlayerCharacter.Position.Y()-gfx.ScreenHeight/2,
+	)
 
 	return nil
 }
@@ -60,10 +60,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		screen,
 		fmt.Sprintf(
 			"Pos x: %.2f, y: %.2f; Center x: %.2f, y: %.2f",
-			g.PlayerCharacter.Position[0],
-			g.PlayerCharacter.Position[1],
-			g.PlayerCharacter.Center[0],
-			g.PlayerCharacter.Center[1]),
+			g.PlayerCharacter.Position.X(),
+			g.PlayerCharacter.Position.Y(),
+			g.PlayerCharacter.Center.X(),
+			g.PlayerCharacter.Center.Y()),
 		0, gfx.ScreenHeight-32,
 	)
 

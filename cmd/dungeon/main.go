@@ -3,9 +3,9 @@ package main
 import (
 	"dungeon/internal/game"
 	"dungeon/internal/gfx"
+	"dungeon/internal/numerics"
 	"github.com/hajimehoshi/ebiten/v2"
 	"go.uber.org/zap"
-	"golang.org/x/image/math/f64"
 	_ "image/png"
 	"log"
 	"os"
@@ -28,7 +28,7 @@ func main() {
 	zap.L().Info("Starting game")
 	if err := ebiten.RunGame(&game.Game{
 		PlayerCharacter: playerCharacter,
-		Camera:          &game.Camera{ViewPort: f64.Vec2{gfx.ScreenWidth, gfx.ScreenHeight}},
+		Camera:          &game.Camera{ViewPort: numerics.NewVec2(gfx.ScreenWidth, gfx.ScreenHeight)},
 		CurrentLevel:    game.GrassLevel,
 	}); err != nil {
 		log.Fatal(err)

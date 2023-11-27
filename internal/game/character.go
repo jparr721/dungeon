@@ -2,10 +2,10 @@ package game
 
 import (
 	"dungeon/internal/animation"
+	"dungeon/internal/numerics"
 	"dungeon/internal/physics"
 	"github.com/hajimehoshi/ebiten/v2"
 	"go.uber.org/zap"
-	"golang.org/x/image/math/f64"
 	"math"
 )
 
@@ -22,19 +22,22 @@ func NewPlayerCharacter(screenWidth, screenHeight int) *PlayerCharacter {
 		physics.Left:  animation.WizardSide,
 		physics.Right: animation.WizardSide,
 	})
-	pc.UpdatePosition(float64(screenWidth/2), float64(screenHeight/2))
+	pc.UpdatePosition(numerics.NewVec2(float64(screenWidth/2), float64(screenHeight/2)))
 	return &PlayerCharacter{pc}
 }
 
 func (c *PlayerCharacter) Move(camera *Camera) {
 	// Handle the movement of the player with the keys
-	dx, dy := c.handleKeyPress()
-	if dx != 0 || dy != 0 {
-		c.Count++
-		c.UpdatePosition(dx, dy)
-	} else {
+	diff := c.handleKeyPress()
+
+	// Only increment the count when the player is moving, otherwise reset to the start frame.
+	if diff.IsZero() {
 		c.Count = 0
+	} else {
+		c.Count++
 	}
+
+	c.UpdatePosition(diff)
 
 	c.handleMouseMovement(camera)
 }
@@ -46,11 +49,11 @@ func (c *PlayerCharacter) handleMouseMovement(camera *Camera) {
 	// Handle the rotation of the player to face the direction of the mouse pointer
 	mouseX, mouseY := ebiten.CursorPosition()
 	mx, my := camera.ScreenToWorld(mouseX, mouseY)
-	normal := f64.Vec2{
-		mx - c.Position[0],
-		my - c.Position[1],
-	}
-	c.Rotation = c.calculateXAxisAngleFromVec(normal)
+	normal := numerics.NewVec2(
+		mx-c.Position.X(),
+		my-c.Position.Y(),
+	)
+	c.Rotation = c.calculateXAxisAngleFromVec(normal.Normalized())
 
 	rotDeg := c.Rotation * 180 / math.Pi
 
@@ -65,42 +68,32 @@ func (c *PlayerCharacter) handleMouseMovement(camera *Camera) {
 	}
 }
 
-func (c *PlayerCharacter) handleKeyPress() (float64, float64) {
-	var dx, dy float64
+func (c *PlayerCharacter) handleKeyPress() numerics.Vec2 {
+	diff := numerics.Zero()
 
 	if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-		dy = -1
+		diff = diff.Add(numerics.NewVec2(0, -1))
 	} else if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-		dy = 1
+		diff = diff.Add(numerics.NewVec2(0, 1))
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		dx = -1
+		diff = diff.Add(numerics.NewVec2(-1, 0))
 	} else if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		dx = 1
+		diff = diff.Add(numerics.NewVec2(1, 0))
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyShiftLeft) {
-		c.Velocity = f64.Vec2{2.0, 2.0}
+		c.Velocity = numerics.One().MulScalar(2)
 	} else {
-		c.Velocity = f64.Vec2{1.0, 1.0}
+		c.Velocity = numerics.One()
 	}
 
-	return dx * c.Velocity[0], dy * c.Velocity[1]
+	return diff.Mul(c.Velocity)
 }
 
-// calculateXAxisAngleFromVec calculates the roation of the player to face in the direction
-// of the vector. So we compute the angle between the vector and the x-axis, then rotate.
-func (c *PlayerCharacter) calculateXAxisAngleFromVec(vec f64.Vec2) float64 {
-	// Normalize the vector
-	// TODO: Make this a helper
-	vec = f64.Vec2{
-		vec[0] / math.Sqrt(vec[0]*vec[0]+vec[1]*vec[1]),
-		vec[1] / math.Sqrt(vec[0]*vec[0]+vec[1]*vec[1]),
-	}
-
-	// Rotate the player
-	angle := math.Atan2(vec[1], vec[0])
-
-	return angle
+// calculateXAxisAngleFromVec calculates the angle of the vector with respect to the x-axis. Assumes that the input
+// vector is normalized.
+func (c *PlayerCharacter) calculateXAxisAngleFromVec(vec numerics.Vec2) float64 {
+	return math.Atan2(vec.Y(), vec.X())
 }

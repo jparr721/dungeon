@@ -2,8 +2,8 @@ package physics
 
 import (
 	"dungeon/internal/animation"
+	"dungeon/internal/numerics"
 	"github.com/hajimehoshi/ebiten/v2"
-	"golang.org/x/image/math/f64"
 	"image"
 )
 
@@ -56,13 +56,13 @@ type Object struct {
 	Op *ebiten.DrawImageOptions
 
 	// The current position of the object
-	Position f64.Vec2
+	Position numerics.Vec2
 
 	// The center of the object in world space
-	Center f64.Vec2
+	Center numerics.Vec2
 
 	// The current velocity of the object
-	Velocity f64.Vec2
+	Velocity numerics.Vec2
 
 	// The current rotation of the object
 	Rotation float64
@@ -84,15 +84,15 @@ func NewObjectFromImage(image *animation.Image) *Object {
 
 func NewObjectFromImages(images map[Orientation]*animation.Image) *Object {
 	var aabb *AABB
-	var center f64.Vec2
+	var center numerics.Vec2
 	var orientation Orientation
 	if _, ok := images[All]; !ok {
-		aabb = NewAABB(f64.Vec2{0, 0}, images[Front])
-		center = f64.Vec2{float64(images[Front].FrameWidth / 2), float64(images[Front].FrameHeight / 2)}
+		aabb = NewAABB(numerics.Zero(), images[Front])
+		center = numerics.NewVec2(float64(images[Front].FrameWidth/2), float64(images[Front].FrameHeight/2))
 		orientation = Front
 	} else {
-		aabb = NewAABB(f64.Vec2{0, 0}, images[All])
-		center = f64.Vec2{float64(images[All].FrameWidth / 2), float64(images[All].FrameHeight / 2)}
+		aabb = NewAABB(numerics.Zero(), images[All])
+		center = numerics.NewVec2(float64(images[All].FrameWidth/2), float64(images[All].FrameHeight/2))
 		orientation = All
 	}
 
@@ -100,18 +100,17 @@ func NewObjectFromImages(images map[Orientation]*animation.Image) *Object {
 		Image:       images,
 		Op:          &ebiten.DrawImageOptions{},
 		Center:      center,
-		Velocity:    f64.Vec2{1.0, 1.0},
+		Velocity:    numerics.One(),
 		AABB:        aabb,
 		Orientation: orientation,
 	}
 }
 
-func (o *Object) UpdatePosition(dx, dy float64) {
-	o.Position[0] += dx
-	o.Position[1] += dy
-	o.Center[0] += dx
-	o.Center[1] += dy
-	o.AABB.UpdatePosition(dx, dy)
+func (o *Object) UpdatePosition(diff numerics.Vec2) {
+	o.Position = o.Position.Add(diff)
+	o.Center = o.Center.Add(diff)
+
+	o.AABB.UpdatePosition(diff)
 }
 
 func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
@@ -126,14 +125,13 @@ func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 	o.Op.GeoM = ebiten.GeoM{}
 
 	if o.Orientation == Left {
-		//o.Op.GeoM.Scale(-1.0, 1.0)
-		//o.Op.GeoM.Translate(float64(img.FrameWidth), 0)
-
+		// Left to right flips over the y axis
 		o.Op.GeoM.Scale(1.0, -1.0)
 		o.Op.GeoM.Translate(0, float64(img.FrameHeight))
 	}
 
 	if o.Orientation == Back {
+		// TODO: This doesn't really fix the issue
 		o.Op.GeoM.Scale(-1.0, 1.0)
 		o.Op.GeoM.Translate(float64(img.FrameWidth), 0)
 	}
@@ -152,7 +150,7 @@ func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 	o.Op.GeoM.Concat(*cameraTransform)
 
 	// Move to the object position including any camera offset
-	o.Op.GeoM.Translate(o.Position[0], o.Position[1])
+	o.Op.GeoM.Translate(o.Position.X(), o.Position.Y())
 
 	// This just chooses the character frame from the sprite sheet. We divide by 5 so that way the transition
 	// between animation frames is less intense.
