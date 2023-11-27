@@ -87,11 +87,11 @@ func NewObjectFromImages(images map[Orientation]*animation.Image) *Object {
 	var center numerics.Vec2
 	var orientation Orientation
 	if _, ok := images[All]; !ok {
-		aabb = NewAABB(numerics.Zero(), images[Front])
+		aabb = NewAABB(numerics.ZeroVec2(), images[Front])
 		center = numerics.NewVec2(float64(images[Front].FrameWidth/2), float64(images[Front].FrameHeight/2))
 		orientation = Front
 	} else {
-		aabb = NewAABB(numerics.Zero(), images[All])
+		aabb = NewAABB(numerics.ZeroVec2(), images[All])
 		center = numerics.NewVec2(float64(images[All].FrameWidth/2), float64(images[All].FrameHeight/2))
 		orientation = All
 	}
@@ -100,7 +100,7 @@ func NewObjectFromImages(images map[Orientation]*animation.Image) *Object {
 		Image:       images,
 		Op:          &ebiten.DrawImageOptions{},
 		Center:      center,
-		Velocity:    numerics.One(),
+		Velocity:    numerics.OneVec2(),
 		AABB:        aabb,
 		Orientation: orientation,
 	}

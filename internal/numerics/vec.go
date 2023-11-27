@@ -10,11 +10,11 @@ func NewVec2(a, b float64) Vec2 {
 	return Vec2{f64.Vec2{a, b}}
 }
 
-func Zero() Vec2 {
+func ZeroVec2() Vec2 {
 	return NewVec2(0, 0)
 }
 
-func One() Vec2 {
+func OneVec2() Vec2 {
 	return NewVec2(1, 1)
 }
 

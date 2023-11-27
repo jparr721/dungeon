@@ -69,7 +69,7 @@ func (c *PlayerCharacter) handleMouseMovement(camera *Camera) {
 }
 
 func (c *PlayerCharacter) handleKeyPress() numerics.Vec2 {
-	diff := numerics.Zero()
+	diff := numerics.ZeroVec2()
 
 	if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
 		diff = diff.Add(numerics.NewVec2(0, -1))
@@ -84,9 +84,9 @@ func (c *PlayerCharacter) handleKeyPress() numerics.Vec2 {
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyShiftLeft) {
-		c.Velocity = numerics.One().MulScalar(2)
+		c.Velocity = numerics.OneVec2().MulScalar(2)
 	} else {
-		c.Velocity = numerics.One()
+		c.Velocity = numerics.OneVec2()
 	}
 
 	return diff.Mul(c.Velocity)
