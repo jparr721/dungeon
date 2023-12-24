@@ -19,6 +19,8 @@ var (
 func init() {
 	Grass = NewTileFromImage(images.Tiles_png)
 	GrassLevel = &Level{
+		TileSize:  16,
+		TileCount: 25,
 		Layers: [][]int{
 			{
 				243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243, 243,
@@ -71,13 +73,15 @@ func NewTileFromImage(imgBytes []byte) *Tile {
 }
 
 type Level struct {
-	Layers [][]int
+	Layers    [][]int
+	TileSize  int
+	TileCount int
+
+	IsBossLevel bool
 }
 
 func (l *Level) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
-	tileXCount := 25
-	tileSize := 16
-	worldSizeX := (1000 + tileSize) / tileSize
+	worldSizeX := (1000 + l.TileSize) / l.TileSize
 
 	startX := float64(gfx.ScreenWidth/2) - 500
 	startY := float64(gfx.ScreenHeight/2) - 250
@@ -88,15 +92,15 @@ func (l *Level) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 				GeoM: *cameraTransform,
 			}
 
-			tx := startX + float64((i%worldSizeX)*tileSize)
-			ty := startY + float64((i/worldSizeX)*tileSize)
+			tx := startX + float64((i%worldSizeX)*l.TileSize)
+			ty := startY + float64((i/worldSizeX)*l.TileSize)
 
 			op.GeoM.Translate(tx, ty)
 
-			sx := (t % tileXCount) * tileSize
-			sy := (t / tileXCount) * tileSize
+			sx := (t % l.TileCount) * l.TileSize
+			sy := (t / l.TileCount) * l.TileSize
 
-			screen.DrawImage(Grass.Image.SubImage(image.Rect(sx, sy, sx+tileSize, sy+tileSize)).(*ebiten.Image), op)
+			screen.DrawImage(Grass.Image.SubImage(image.Rect(sx, sy, sx+l.TileSize, sy+l.TileSize)).(*ebiten.Image), op)
 		}
 	}
 }
