@@ -2,10 +2,9 @@ package animation
 
 import (
 	"bytes"
-	"dungeon/assets"
+	assets "dungeon/assets/images"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/examples/resources/images"
 	"go.uber.org/zap"
 	"image"
 	_ "image/png"
@@ -14,14 +13,11 @@ import (
 
 // Globally defined images
 var (
-	// Runner image
-	Runner      *Image
 	WizardFront *Image
 	WizardSide  *Image
 )
 
 func init() {
-	Runner = NewImageFromImage(images.Runner_png, 8, 0, 32, 32, 32)
 	WizardFront = NewImageFromImage(assets.WizardSheet, 3, 0, 24, 24, 24)
 	WizardSide = NewImageFromImage(assets.WizardSheet, 3, 24, 24, 24, 24)
 }
