@@ -4,6 +4,7 @@ import (
 	"dungeon/internal/gfx"
 	"dungeon/internal/numerics"
 	"fmt"
+	ebimgui "github.com/gabstv/ebiten-imgui/v3"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"math"
@@ -83,8 +84,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		fmt.Sprintf("Bounding Box %s", g.PlayerCharacter.AABB.String()),
 		0, gfx.ScreenHeight-108,
 	)
+
+	ebimgui.Draw(screen)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
+	ebimgui.SetDisplaySize(float32(gfx.ScreenWidth), float32(gfx.ScreenHeight))
 	return gfx.ScreenWidth, gfx.ScreenHeight
 }

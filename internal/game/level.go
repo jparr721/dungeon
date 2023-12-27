@@ -4,17 +4,30 @@ import (
 	"bytes"
 	"dungeon/internal/gfx"
 	"dungeon/internal/numerics"
+	imgui "github.com/gabstv/cimgui-go"
+	ebimgui "github.com/gabstv/ebiten-imgui/v3"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/images"
 	"go.uber.org/zap"
 	"image"
 	"image/color"
+	"math/rand"
 )
 
 // Globally defined tiles
 var (
-	// Grass tile
-	Grass      *Tile
+	Debug       *Tile
+	DebugIndex  int32
+	GrassEmpty  *Tile
+	GrassPlant1 *Tile
+	GrassPlant2 *Tile
+
+	Cobblestone1 *Tile
+	Cobblestone2 *Tile
+	Cobblestone3 *Tile
+	Cobblestone4 *Tile
+	Cobblestone5 *Tile
+
 	GrassLevel *Room
 )
 
@@ -27,25 +40,13 @@ const (
 )
 
 func init() {
-	Grass = NewTileFromImage(images.Tiles_png, 243)
-
-	// Calculate the number of layers needed to fill a 1000x500 room
-
-	position := numerics.NewVec2(gfx.ScreenWidth/2-500, gfx.ScreenHeight/2-250)
-	dimensions := numerics.NewVec2(adjustToTileSize(1000), adjustToTileSize(500))
-	tilesNeeded := nTilesNeeded(int(dimensions.X() * dimensions.Y()))
-
-	for i := 0; i < tilesNeeded; i++ {
-		grassLayers = append(grassLayers, *Grass)
-	}
-
-	// Thisll be generated later
-	GrassLevel = &Room{
-		Position:   position,
-		Dimensions: dimensions,
-		IsBossRoom: false,
-	}
-	GrassLevel.Layers = append(GrassLevel.Layers, grassLayers)
+	Debug = NewTileFromImage(images.Tiles_png, TileCount, TileSize, int(DebugIndex))
+	GrassEmpty = NewTileFromImage(images.Tiles_png, TileCount, TileSize, 243)
+	GrassPlant1 = NewTileFromImage(images.Tiles_png, TileCount, TileSize, 218)
+	GrassPlant2 = NewTileFromImage(images.Tiles_png, TileCount, TileSize, 219)
+	GrassLevel = NewRoom(
+		numerics.NewVec2(gfx.ScreenWidth/2-500, gfx.ScreenHeight/2-250),
+		numerics.NewVec2(adjustToTileSize(1000), adjustToTileSize(500)))
 }
 
 func adjustToTileSize(dimension int) float64 {
@@ -61,20 +62,26 @@ func nTilesNeeded(area int) int {
 
 type Tile struct {
 	*ebiten.Image
-
+	// The index into the image
 	Index int
 }
 
-func NewTileFromImage(imgBytes []byte, index int) *Tile {
+func NewTileFromImage(imgBytes []byte, tileCount, tileSize, index int) *Tile {
 	img, _, err := image.Decode(bytes.NewReader(imgBytes))
 	if err != nil {
 		zap.L().Fatal("Failed to decode image", zap.Error(err))
 	}
 
-	startX := (index % TileCount) * TileSize
-	startY := (index / TileCount) * TileSize
+	startX := (index % tileCount) * tileSize
+	startY := (index / tileCount) * tileSize
 
-	si := ebiten.NewImageFromImage(img).SubImage(image.Rect(startX, startY, startX+TileSize, startY+TileSize)).(*ebiten.Image)
+	si := ebiten.NewImageFromImage(img).SubImage(image.Rect(
+		startX,
+		startY,
+		startX+tileSize,
+		startY+tileSize,
+	)).(*ebiten.Image)
+
 	return &Tile{
 		Image: si,
 		Index: index,
@@ -82,6 +89,10 @@ func NewTileFromImage(imgBytes []byte, index int) *Tile {
 }
 
 func (t *Tile) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM, pos numerics.Vec2) {
+	if cameraTransform == nil {
+		cameraTransform = &ebiten.GeoM{}
+	}
+
 	op := &ebiten.DrawImageOptions{
 		GeoM: *cameraTransform,
 	}
@@ -91,7 +102,7 @@ func (t *Tile) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM, pos nu
 }
 
 type Room struct {
-	Layers [][]Tile
+	Layers [][]*Tile
 
 	// IsBossRoom just determines if this room needs to load a boss.
 	IsBossRoom bool
@@ -103,29 +114,56 @@ type Room struct {
 	Dimensions numerics.Vec2
 }
 
-func NewRoom() *Room {
-	position := numerics.NewVec2(gfx.ScreenWidth/2-500, gfx.ScreenHeight/2-250)
-	dimensions := numerics.NewVec2(adjustToTileSize(1000), adjustToTileSize(500))
+func NewRoom(position, dimensions numerics.Vec2) *Room {
+	// The tiles needed to cover the floor
 	tilesNeeded := nTilesNeeded(int(dimensions.X() * dimensions.Y()))
 
-	grassLayers := make([]Tile, 0)
+	layer := make([]*Tile, 0)
 	for i := 0; i < tilesNeeded; i++ {
-		grassLayers = append(grassLayers, *Grass)
+		if rand.Float64() < 0.01 {
+			if rand.Float64() < 0.5 {
+				layer = append(layer, GrassPlant1)
+			} else {
+				layer = append(layer, GrassPlant2)
+			}
+		} else {
+			layer = append(layer, Debug)
+		}
+
 	}
 
-	// Thisll be generated later
-	GrassLevel = &Room{
+	// This'll be generated later
+	room := &Room{
 		Position:   position,
 		Dimensions: dimensions,
 		IsBossRoom: false,
 	}
-	GrassLevel.Layers = append(GrassLevel.Layers, grassLayers)
-	return &Room{}
+	room.Layers = append(room.Layers, layer)
+	return room
 }
 
 func (r *Room) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
+	ebimgui.Update(1.0 / 60.0)
+	ebimgui.BeginFrame()
+	defer ebimgui.EndFrame()
+	imgui.InputIntV(
+		"Index",
+		&DebugIndex,
+		1,
+		5,
+		0,
+	)
+
 	worldSizeX := int(r.Dimensions.X() / TileSize)
 	worldSizeY := int(r.Dimensions.Y() / TileSize)
+
+	newDebug := NewTileFromImage(images.Tiles_png, TileCount, TileSize, int(DebugIndex))
+	// Update all the tiles
+	for x := 0; x < worldSizeX; x++ {
+		for y := 0; y < worldSizeY; y++ {
+			r.Layers[0][x+y*worldSizeX] = newDebug
+		}
+	}
 
 	bg := ebiten.NewImage(int(r.Dimensions.X()), int(r.Dimensions.Y()))
 	bg.Fill(color.White)
