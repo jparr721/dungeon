@@ -143,9 +143,6 @@ func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 	// Translate back to the original position
 	o.Op.GeoM.Translate(float64(img.FrameWidth)/2, float64(img.FrameHeight)/2)
 
-	// Scale asset after rotation
-	o.Op.GeoM.Scale(2.0, 2.0)
-
 	// Now, apply the camera transformation to this
 	o.Op.GeoM.Concat(*cameraTransform)
 
