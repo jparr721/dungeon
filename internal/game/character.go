@@ -3,7 +3,7 @@ package game
 import (
 	"dungeon/internal/animation"
 	"dungeon/internal/numerics"
-	"dungeon/internal/physics"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"go.uber.org/zap"
 	"math"
@@ -11,22 +11,22 @@ import (
 
 // PlayerCharacter is a player character
 type PlayerCharacter struct {
-	*physics.Object
+	*Object
 }
 
 func NewPlayerCharacter(screenWidth, screenHeight int) *PlayerCharacter {
 	zap.L().Info("Loading player character")
-	pc := physics.NewObjectFromImages(map[physics.Orientation]*animation.Image{
-		physics.Front: animation.WizardFront,
-		physics.Back:  animation.WizardFront,
-		physics.Left:  animation.WizardSide,
-		physics.Right: animation.WizardSide,
+	pc := NewObjectFromImages(map[Orientation]*animation.Image{
+		Front: animation.WizardFront,
+		Back:  animation.WizardFront,
+		Left:  animation.WizardSide,
+		Right: animation.WizardSide,
 	})
-	pc.UpdatePosition(numerics.NewVec2(float64(screenWidth/2), float64(screenHeight/2)))
+	pc.UpdatePosition(numerics.NewVec2(float64(screenWidth/2), float64(screenHeight/2)), []*Object{}, nil)
 	return &PlayerCharacter{pc}
 }
 
-func (c *PlayerCharacter) Move(camera *Camera) {
+func (c *PlayerCharacter) Move(camera *Camera, objects []*Object, room *Room) {
 	// Handle the movement of the player with the keys
 	diff := c.handleKeyPress()
 
@@ -37,12 +37,11 @@ func (c *PlayerCharacter) Move(camera *Camera) {
 		c.Count++
 	}
 
-	c.UpdatePosition(diff)
-
+	c.UpdatePosition(diff, objects, room)
 	c.handleMouseMovement(camera)
 }
 
-func (c *PlayerCharacter) handleCollision(collisionObjects []physics.Collidable) {
+func (c *PlayerCharacter) handleCollision(collisionObjects []Collidable) {
 }
 
 func (c *PlayerCharacter) handleMouseMovement(camera *Camera) {
@@ -58,13 +57,13 @@ func (c *PlayerCharacter) handleMouseMovement(camera *Camera) {
 	rotDeg := c.Rotation * 180 / math.Pi
 
 	if rotDeg >= -45 && rotDeg <= 45 {
-		c.Orientation = physics.Right
+		c.Orientation = Right
 	} else if rotDeg >= 45 && rotDeg <= 135 {
-		c.Orientation = physics.Front
+		c.Orientation = Front
 	} else if rotDeg >= 135 || rotDeg <= -135 {
-		c.Orientation = physics.Left
+		c.Orientation = Left
 	} else if rotDeg >= -135 && rotDeg <= -45 {
-		c.Orientation = physics.Back
+		c.Orientation = Back
 	}
 }
 

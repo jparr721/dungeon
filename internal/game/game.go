@@ -3,6 +3,7 @@ package game
 import (
 	"dungeon/internal/gfx"
 	"dungeon/internal/numerics"
+
 	"fmt"
 	ebimgui "github.com/gabstv/ebiten-imgui/v3"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -13,11 +14,12 @@ import (
 type Game struct {
 	PlayerCharacter *PlayerCharacter
 	Camera          *Camera
-	CurrentLevel    *Room
+	CurrentLevel    *Level
+	Objects         []*Object
 }
 
 func (g *Game) Update() error {
-	g.PlayerCharacter.Move(g.Camera)
+	g.PlayerCharacter.Move(g.Camera, g.Objects, g.CurrentLevel.CurrentRoom())
 
 	// Camera is always centered on the main PlayerCharacter
 	g.Camera.Position = numerics.NewVec2(

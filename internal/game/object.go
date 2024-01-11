@@ -1,4 +1,4 @@
-package physics
+package game
 
 import (
 	"dungeon/internal/animation"
@@ -10,11 +10,11 @@ import (
 type Collidable interface {
 	// IsCollidingInternal checks if an object, which exists WITHIN a bounding volume, is coming near
 	// the edge of the shape where it would break out. This is for things like levels.
-	IsCollidingInternal(b *Collidable) bool
+	IsCollidingInternal(b Collidable) bool
 
 	// IsCollidingExternal check if an object, which exists OUTSIDE a bounding volume, is going
 	// to clip inside the edge of the shape. This is for basically everything else.
-	IsCollidingExternal(b *Collidable) bool
+	IsCollidingExternal(b Collidable) bool
 
 	BoundingBox() *AABB
 }
@@ -77,7 +77,6 @@ type Object struct {
 }
 
 // NewObjectFromImage creates a new object from an image instance.
-
 func NewObjectFromImage(image *animation.Image) *Object {
 	return NewObjectFromImages(map[Orientation]*animation.Image{All: image})
 }
@@ -106,11 +105,29 @@ func NewObjectFromImages(images map[Orientation]*animation.Image) *Object {
 	}
 }
 
-func (o *Object) UpdatePosition(diff numerics.Vec2) {
+func (o *Object) UpdatePosition(diff numerics.Vec2, objects []*Object, room *Room) {
+	// Check for object collisions
+	for _, obj := range objects {
+		if obj == o {
+			continue
+		}
+
+		// If any collision is occurring, do not let the player move in the direction of the collision
+		if o.IsCollidingInternal(obj) || o.IsCollidingExternal(obj) {
+			diff = numerics.ZeroVec2()
+		}
+	}
+
+	// Check for room collisions
+	if room != nil && room.CheckCollisionAndUpdatePosition(o, diff) {
+		diff = numerics.ZeroVec2()
+	}
+
 	o.Position = o.Position.Add(diff)
 	o.Center = o.Center.Add(diff)
 
 	o.AABB.UpdatePosition(diff)
+
 }
 
 func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
@@ -169,4 +186,8 @@ func (o *Object) IsCollidingInternal(b Collidable) bool {
 // IsCollidingExternal implements the collidable interface for the Object
 func (o *Object) IsCollidingExternal(b Collidable) bool {
 	return o.IsExternallyColliding2D(b.BoundingBox())
+}
+
+func (o *Object) BoundingBox() *AABB {
+	return o.AABB
 }

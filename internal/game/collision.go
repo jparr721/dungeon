@@ -1,4 +1,4 @@
-package physics
+package game
 
 import (
 	"dungeon/internal/animation"
@@ -37,7 +37,16 @@ func (a *AABB) UpdatePosition(diff numerics.Vec2) {
 
 func (a *AABB) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 	bbox := ebiten.NewImage(int(a.Max.X()-a.Min.X()), int(a.Max.Y()-a.Min.Y()))
-	vector.StrokeRect(bbox, 0, 0, float32(bbox.Bounds().Max.X), float32(bbox.Bounds().Max.Y), 1, color.RGBA{R: 0xff, A: 0xff}, true)
+	vector.StrokeRect(
+		bbox,
+		0,
+		0,
+		float32(bbox.Bounds().Max.X),
+		float32(bbox.Bounds().Max.Y),
+		1,
+		color.RGBA{R: 0xff, A: 0xff},
+		true,
+	)
 	op := &ebiten.DrawImageOptions{
 		GeoM: *cameraTransform,
 	}
