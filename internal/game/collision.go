@@ -105,17 +105,24 @@ func (a *AABB) IsExternallyColliding2D(b *AABB) bool {
 	b.IsColliding = true
 
 	// Get the direction of the collision
-	if a.Max.X() > b.Min.X() {
-		a.CollisionDirection.X = true
-		b.CollisionDirection.X = true
+	overlapX := min(a.Max.X(), b.Max.X()) - max(a.Min.X(), b.Min.X())
+	overlapY := min(a.Max.Y(), b.Max.Y()) - max(a.Min.Y(), b.Min.Y())
+
+	if overlapX > 0 && overlapY > 0 {
+		// Determine primary collision axis
+		if overlapX > overlapY {
+			// Y-axis is primary
+			a.CollisionDirection.Y = true
+			b.CollisionDirection.Y = true
+		} else {
+			// X-axis is primary
+			a.CollisionDirection.X = true
+			b.CollisionDirection.X = true
+		}
+		return true
 	}
 
-	if a.Max.Y() > b.Min.Y() {
-		a.CollisionDirection.Y = true
-		b.CollisionDirection.Y = true
-	}
-
-	return true
+	return false
 }
 
 // IsInternallyColliding2D checks whether a, which is contained within b, is about to break out of b

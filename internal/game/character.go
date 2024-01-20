@@ -35,20 +35,26 @@ func (c *PlayerCharacter) Move(camera *Camera, objects []*Object, room *Room) {
 
 	// Depending on the collision axis, prevent movement in diff
 	if c.IsColliding {
-		// First, apply the diff to the position
+		// Keep track of the previous diff so we can undo it
 		oldDiff := diff
+
+		// First, apply the diff to the position
 		c.UpdatePosition(oldDiff)
 
+		// Does this move relieve the collision?
 		anyCollision := false
 		for _, a := range objects {
 			if a == c.Object {
 				continue
 			}
+
+			// Check for a bounding box collision
 			if c.IsExternallyColliding2D(a.AABB) {
 				anyCollision = true
 			}
 		}
 
+		// If any of these are colliding, restrict the motion along the collision axis
 		if anyCollision {
 			if c.CollisionDirection.X {
 				diff = numerics.NewVec2(0, diff.Y())
@@ -59,6 +65,7 @@ func (c *PlayerCharacter) Move(camera *Camera, objects []*Object, room *Room) {
 			}
 		}
 
+		// Undo the position update.
 		c.UpdatePosition(oldDiff.MulScalar(-1))
 	}
 

@@ -119,8 +119,10 @@ func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 
 	// Translate to the center of the object
 	o.Op.GeoM.Translate(-float64(img.FrameWidth)/2, -float64(img.FrameHeight)/2)
+
 	// Apply rotation
 	o.Op.GeoM.Rotate(o.Rotation)
+
 	// Translate back to the original position
 	o.Op.GeoM.Translate(float64(img.FrameWidth)/2, float64(img.FrameHeight)/2)
 
