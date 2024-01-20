@@ -55,8 +55,6 @@ func (p *PixelSelector) DrawPixelSelector(img *ebiten.Image) {
 	defer imgui.End()
 
 	io := imgui.CurrentIO()
-	//texW := float32(io.Fonts().TexWidth())
-	//texH := float32(io.Fonts().TexHeight())
 
 	screenPos := imgui.CursorScreenPos()
 	imgSize := img.Bounds().Size()

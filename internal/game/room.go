@@ -3,7 +3,6 @@ package game
 import (
 	"dungeon/internal/animation"
 	"dungeon/internal/numerics"
-	ebimgui "github.com/gabstv/ebiten-imgui/v3"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"image/color"
@@ -19,12 +18,14 @@ type Door struct {
 }
 
 func NewDoor(position numerics.Vec2, to *Room, doorImage *animation.Image) *Door {
+	obj := NewObjectFromImages(map[Orientation]*animation.Image{All: doorImage})
+
+	// Position is the new position, we need to get from where we are to that position
+	diff := position
+	obj.UpdatePosition(diff)
 	return &Door{
-		To: to,
-		Object: &Object{
-			Position: position,
-			Image:    map[Orientation]*animation.Image{All: doorImage},
-		},
+		To:     to,
+		Object: obj,
 	}
 }
 
@@ -60,9 +61,11 @@ func NewRoom(position, dimensions numerics.Vec2) *Room {
 	//}
 
 	room := &Room{
+		IsBossRoom: false,
 		Position:   position,
 		Dimensions: dimensions,
-		IsBossRoom: false,
+
+		Doors: make([]*Door, 0),
 
 		// Random fill color
 		Color: color.RGBA{
@@ -74,8 +77,6 @@ func NewRoom(position, dimensions numerics.Vec2) *Room {
 
 		// Stroke width to give boundaries some texture
 		StrokeWidth: 50,
-
-		Doors: make([]*Door, 0),
 	}
 	room.Layers = append(room.Layers, layer)
 	return room
@@ -85,7 +86,7 @@ func (r *Room) Bounds() (numerics.Vec2, numerics.Vec2) {
 	return r.Position, r.Position.Add(r.Dimensions)
 }
 
-func (r *Room) CheckCollisionAndUpdatePosition(object *Object, diff numerics.Vec2) bool {
+func (r *Room) CheckCollisionAndUpdatePosition(object *Object, diff numerics.Vec2) numerics.Vec2 {
 	newPos := object.Position.Add(diff)
 
 	startBounds, endBounds := r.Bounds()
@@ -98,36 +99,25 @@ func (r *Room) CheckCollisionAndUpdatePosition(object *Object, diff numerics.Vec
 	))
 
 	// Check if the physics object is about to exceed the extent of the room
-	updated := false
 	// Check for collision on the X-axis and update position
 	if newPos.X() < startBounds.X() {
 		newPos = numerics.NewVec2(startBounds.X(), newPos.Y())
-		updated = true
 	} else if newPos.X() >= endBounds.X() {
 		newPos = numerics.NewVec2(endBounds.X(), newPos.Y())
-		updated = true
 	}
 
 	// Check for collision on the Y-axis and update position
 	if newPos.Y() < startBounds.Y() {
 		newPos = numerics.NewVec2(newPos.X(), startBounds.Y())
-		updated = true
 	} else if newPos.Y() >= endBounds.Y() {
 		newPos = numerics.NewVec2(newPos.X(), endBounds.Y())
-		updated = true
 	}
 
-	// Apply the updated position to the object
-	object.Position = newPos
-
-	return updated
+	// Update diff to reflect newPos
+	return newPos.Sub(object.Position)
 }
 
 func (r *Room) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
-	ebimgui.Update(1.0 / 60.0)
-	ebimgui.BeginFrame()
-	defer ebimgui.EndFrame()
-
 	//worldSizeX := int(r.Dimensions.X() / TileSize)
 	//worldSizeY := int(r.Dimensions.Y() / TileSize)
 

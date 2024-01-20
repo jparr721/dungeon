@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	"image"
 	_ "image/png"
+	"log"
 	"os"
 )
 
@@ -18,8 +19,8 @@ var (
 )
 
 func init() {
-	WizardFront = NewImageFromImage(assets.WizardSheet, 3, 0, 24, 24, 24)
-	WizardSide = NewImageFromImage(assets.WizardSheet, 3, 24, 24, 24, 24)
+	WizardFront = NewImageFromImageBytes(assets.WizardSheet, 3, 0, 24, 24, 24)
+	WizardSide = NewImageFromImageBytes(assets.WizardSheet, 3, 24, 24, 24, 24)
 }
 
 type Image struct {
@@ -60,7 +61,24 @@ func NewImageFromFile(filename string, frameCount, frameOX, frameOY, frameWidth,
 	}
 }
 
-func NewImageFromImage(imgBytes []byte, frameCount, frameOX, frameOY, frameWidth, frameHeight int) *Image {
+// NewImageFromImage creates a new image from an existing ebiten image object. This is reserved for filled images.
+func NewImageFromImage(img *ebiten.Image) *Image {
+	bounds := img.Bounds().Size()
+	return &Image{
+		FrameCount:  1,
+		FrameOX:     0,
+		FrameOY:     0,
+		FrameWidth:  bounds.X,
+		FrameHeight: bounds.Y,
+		Image:       img,
+	}
+}
+
+func NewImageFromImageBytes(imgBytes []byte, frameCount, frameOX, frameOY, frameWidth, frameHeight int) *Image {
+	if frameCount < 1 {
+		log.Fatal("Frame count cannot be < 1")
+	}
+
 	img, format, err := image.Decode(bytes.NewReader(imgBytes))
 
 	zap.L().Debug("Image format", zap.String("format", format))

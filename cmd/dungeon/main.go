@@ -33,10 +33,15 @@ func main() {
 		playerCharacter.Object,
 	)
 
+	level := game.NewLevel()
+	for _, door := range level.CurrentRoom().Doors {
+		objects = append(objects, door.Object)
+	}
+
 	if err := ebiten.RunGame(&game.Game{
 		PlayerCharacter: playerCharacter,
 		Camera:          &game.Camera{ViewPort: numerics.NewVec2(gfx.ScreenWidth, gfx.ScreenHeight)},
-		CurrentLevel:    game.NewLevel(),
+		CurrentLevel:    level,
 		Objects:         objects,
 	}); err != nil {
 		log.Fatal(err)

@@ -9,9 +9,15 @@ import (
 	"image/color"
 )
 
+type CollisionDirection struct {
+	X, Y bool
+}
+
 type AABB struct {
-	Min numerics.Vec2
-	Max numerics.Vec2
+	IsColliding        bool
+	CollisionDirection CollisionDirection
+	Min                numerics.Vec2
+	Max                numerics.Vec2
 }
 
 // NewAABB computes the bounding box from an image and player position
@@ -21,13 +27,34 @@ func NewAABB(pos numerics.Vec2, img *animation.Image) *AABB {
 	maxBounds := numerics.NewVec2(x+float64(img.FrameWidth), y+float64(img.FrameHeight))
 
 	return &AABB{
-		Min: minBounds,
-		Max: maxBounds,
+		IsColliding: false,
+		Min:         minBounds,
+		Max:         maxBounds,
 	}
 }
 
 func (a *AABB) String() string {
-	return fmt.Sprintf("Min: (%.2f, %.2f), Max: (%.2f, %.2f)", a.Min.X(), a.Min.Y(), a.Max.X(), a.Max.Y())
+	return fmt.Sprintf(
+		"IsColliding: %t Min: (%.2f, %.2f), Max: (%.2f, %.2f)",
+		a.IsColliding,
+		a.Min.X(),
+		a.Min.Y(),
+		a.Max.X(),
+		a.Max.Y(),
+	)
+}
+
+func (a *AABB) Dimensions() numerics.Vec2 {
+	return numerics.NewVec2(
+		a.Max.X()-a.Min.X(),
+		a.Max.Y()-a.Min.Y(),
+	)
+}
+
+// SetPosition sets the position of the AABB such that the min value is the top-left and the max is the bottom right.
+func (a *AABB) SetPosition(min numerics.Vec2, max numerics.Vec2) {
+	a.Min = min
+	a.Max = max
 }
 
 func (a *AABB) UpdatePosition(diff numerics.Vec2) {
@@ -37,20 +64,31 @@ func (a *AABB) UpdatePosition(diff numerics.Vec2) {
 
 func (a *AABB) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
 	bbox := ebiten.NewImage(int(a.Max.X()-a.Min.X()), int(a.Max.Y()-a.Min.Y()))
+
+	boxColor := color.RGBA{R: 0xff, A: 0xff}
+	if a.IsColliding {
+		boxColor = color.RGBA{G: 0xff, A: 0xff}
+	}
+
 	vector.StrokeRect(
 		bbox,
 		0,
 		0,
 		float32(bbox.Bounds().Max.X),
 		float32(bbox.Bounds().Max.Y),
-		1,
-		color.RGBA{R: 0xff, A: 0xff},
+		3,
+		boxColor,
 		true,
 	)
 	op := &ebiten.DrawImageOptions{
 		GeoM: *cameraTransform,
 	}
 	screen.DrawImage(bbox, op)
+}
+
+func (a *AABB) ResetCollisionState() {
+	a.IsColliding = false
+	a.CollisionDirection = CollisionDirection{}
 }
 
 // IsExternallyColliding2D checks whether a, which is outside b, is about to clip into b
@@ -61,6 +99,20 @@ func (a *AABB) IsExternallyColliding2D(b *AABB) bool {
 
 	if a.Max.Y() < b.Min.Y() || a.Min.Y() > b.Max.Y() {
 		return false
+	}
+
+	a.IsColliding = true
+	b.IsColliding = true
+
+	// Get the direction of the collision
+	if a.Max.X() > b.Min.X() {
+		a.CollisionDirection.X = true
+		b.CollisionDirection.X = true
+	}
+
+	if a.Max.Y() > b.Min.Y() {
+		a.CollisionDirection.Y = true
+		b.CollisionDirection.Y = true
 	}
 
 	return true
@@ -76,5 +128,7 @@ func (a *AABB) IsInternallyColliding2D(b *AABB) bool {
 		return false
 	}
 
+	a.IsColliding = true
+	b.IsColliding = true
 	return true
 }

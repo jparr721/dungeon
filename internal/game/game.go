@@ -3,7 +3,6 @@ package game
 import (
 	"dungeon/internal/gfx"
 	"dungeon/internal/numerics"
-
 	"fmt"
 	ebimgui "github.com/gabstv/ebiten-imgui/v3"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -19,6 +18,24 @@ type Game struct {
 }
 
 func (g *Game) Update() error {
+	ebimgui.Update(1.0 / 60.0)
+	ebimgui.BeginFrame()
+	defer ebimgui.EndFrame()
+
+	for _, a := range g.Objects {
+		a.ResetCollisionState()
+	}
+
+	for _, a := range g.Objects {
+		for _, b := range g.Objects {
+			if a == b {
+				continue
+			}
+
+			a.IsExternallyColliding2D(b.AABB)
+		}
+	}
+
 	g.PlayerCharacter.Move(g.Camera, g.Objects, g.CurrentLevel.CurrentRoom())
 
 	// Camera is always centered on the main PlayerCharacter

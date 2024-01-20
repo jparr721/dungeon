@@ -22,13 +22,45 @@ func NewPlayerCharacter(screenWidth, screenHeight int) *PlayerCharacter {
 		Left:  animation.WizardSide,
 		Right: animation.WizardSide,
 	})
-	pc.UpdatePosition(numerics.NewVec2(float64(screenWidth/2), float64(screenHeight/2)), []*Object{}, nil)
+	pc.UpdatePosition(numerics.NewVec2(float64(screenWidth/2), float64(screenHeight/2)))
 	return &PlayerCharacter{pc}
 }
 
 func (c *PlayerCharacter) Move(camera *Camera, objects []*Object, room *Room) {
 	// Handle the movement of the player with the keys
 	diff := c.handleKeyPress()
+
+	// Check if the player is colliding with the boundary of the room.
+	diff = room.CheckCollisionAndUpdatePosition(c.Object, diff)
+
+	// Depending on the collision axis, prevent movement in diff
+	if c.IsColliding {
+		// First, apply the diff to the position
+		oldDiff := diff
+		c.UpdatePosition(oldDiff)
+
+		anyCollision := false
+		for _, a := range objects {
+			if a == c.Object {
+				continue
+			}
+			if c.IsExternallyColliding2D(a.AABB) {
+				anyCollision = true
+			}
+		}
+
+		if anyCollision {
+			if c.CollisionDirection.X {
+				diff = numerics.NewVec2(0, diff.Y())
+			}
+
+			if c.CollisionDirection.Y {
+				diff = numerics.NewVec2(diff.X(), 0)
+			}
+		}
+
+		c.UpdatePosition(oldDiff.MulScalar(-1))
+	}
 
 	// Only increment the count when the player is moving, otherwise reset to the start frame.
 	if diff.IsZero() {
@@ -37,11 +69,8 @@ func (c *PlayerCharacter) Move(camera *Camera, objects []*Object, room *Room) {
 		c.Count++
 	}
 
-	c.UpdatePosition(diff, objects, room)
+	c.UpdatePosition(diff)
 	c.handleMouseMovement(camera)
-}
-
-func (c *PlayerCharacter) handleCollision(collisionObjects []Collidable) {
 }
 
 func (c *PlayerCharacter) handleMouseMovement(camera *Camera) {
