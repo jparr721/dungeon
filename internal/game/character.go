@@ -119,9 +119,9 @@ func (c *PlayerCharacter) handleKeyPress() numerics.Vec2 {
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyShiftLeft) {
-		c.Velocity = numerics.OneVec2().MulScalar(2)
+		c.Velocity = numerics.OneVec2().MulScalar(4)
 	} else {
-		c.Velocity = numerics.OneVec2()
+		c.Velocity = numerics.OneVec2().MulScalar(2)
 	}
 
 	return diff.Mul(c.Velocity)

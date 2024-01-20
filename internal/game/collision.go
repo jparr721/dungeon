@@ -119,6 +119,7 @@ func (a *AABB) IsExternallyColliding2D(b *AABB) bool {
 			a.CollisionDirection.X = true
 			b.CollisionDirection.X = true
 		}
+
 		return true
 	}
 

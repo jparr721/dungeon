@@ -57,11 +57,11 @@ func NewLevel() *Level {
 		// 1 - Right
 		// 2 - Top
 		// 3 - Bottom
-
 		nWalls := 1
-		//if rand.Float64() < 0.05 {
-		//	nWalls = 2
-		//}
+
+		if rand.Float64() < 0.1 {
+			nWalls = 2
+		}
 
 		usedWalls := make([]int, 0)
 		for w := 0; w < nWalls; w++ {
@@ -81,7 +81,7 @@ func NewLevel() *Level {
 			maxX := endPos.X()
 			maxY := endPos.Y()
 
-			// Half way between minX and maxX
+			// Halfway between minX and maxX
 			halfX := minX + (maxX-minX)/2
 			halfY := minY + (maxY-minY)/2
 
