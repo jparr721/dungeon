@@ -38,6 +38,14 @@ func (g *Game) Update() error {
 
 	g.PlayerCharacter.Move(g.Camera, g.Objects, g.CurrentLevel.CurrentRoom())
 
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		g.PlayerCharacter.FireProjectile()
+	}
+
+	for _, proj := range g.PlayerCharacter.Projectiles {
+		proj.Step()
+	}
+
 	// Camera is always centered on the main PlayerCharacter
 	g.Camera.Position = numerics.NewVec2(
 		g.PlayerCharacter.Position.X()-gfx.ScreenWidth/2,
@@ -58,18 +66,28 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Draw the PlayerCharacter and translate them to whatever their current position is
 	g.PlayerCharacter.Render(screen, &cameraTransform)
 
+	// Draw the projectiles
+	for _, proj := range g.PlayerCharacter.Projectiles {
+		proj.Render(screen, &cameraTransform)
+	}
+
 	ebitenutil.DebugPrint(screen,
 		fmt.Sprintf("TPS: %0.2f, FPS: %0.2f", ebiten.ActualTPS(), ebiten.ActualFPS()),
 	)
 
+	mx, my := ebiten.CursorPosition()
+	ex, ey := g.Camera.ScreenToWorld(mx, my)
 	ebitenutil.DebugPrintAt(
 		screen,
 		fmt.Sprintf(
-			"Pos x: %.2f, y: %.2f; Center x: %.2f, y: %.2f",
+			"Pos x: %.2f, y: %.2f; Center x: %.2f, y: %.2f; Mouse x: %.2f, y: %.2f",
 			g.PlayerCharacter.Position.X(),
 			g.PlayerCharacter.Position.Y(),
 			g.PlayerCharacter.Center.X(),
-			g.PlayerCharacter.Center.Y()),
+			g.PlayerCharacter.Center.Y(),
+			ex,
+			ey,
+		),
 		0, gfx.ScreenHeight-32,
 	)
 

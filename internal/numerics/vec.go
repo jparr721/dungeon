@@ -1,6 +1,9 @@
 package numerics
 
-import "golang.org/x/image/math/f64"
+import (
+	"golang.org/x/image/math/f64"
+	"math"
+)
 
 type Vec2 struct {
 	f64.Vec2
@@ -67,7 +70,7 @@ func (v Vec2) Dot(b Vec2) float64 {
 }
 
 func (v Vec2) Length() float64 {
-	return v.Dot(v)
+	return math.Sqrt(v.Dot(v))
 }
 
 func (v Vec2) LengthSquared() float64 {

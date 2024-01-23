@@ -80,6 +80,17 @@ func (c *PlayerCharacter) Move(camera *Camera, objects []*Object, room *Room) {
 	c.handleMouseMovement(camera)
 }
 
+func (c *PlayerCharacter) FireProjectile() {
+	// Get the normal direction
+	normal := MousePosition().Sub(c.Position).Normalized()
+
+	// PLACEHOLDER: White box image 16x16
+	img := animation.NewImageFromImage(ebiten.NewImage(16, 16))
+
+	// Create a new projectile
+	c.Object.FireProjectile(normal, img)
+}
+
 func (c *PlayerCharacter) handleMouseMovement(camera *Camera) {
 	// Handle the rotation of the player to face the direction of the mouse pointer
 	mouseX, mouseY := ebiten.CursorPosition()

@@ -61,6 +61,9 @@ type Object struct {
 	// The current orientation of the image
 	Orientation Orientation
 
+	// Projectiles is a list of projectile objects fired by this object
+	Projectiles []*Projectile
+
 	*AABB
 }
 
@@ -85,6 +88,7 @@ func NewObjectFromImages(images map[Orientation]*animation.Image) *Object {
 		Velocity:    numerics.OneVec2(),
 		AABB:        aabb,
 		Orientation: orientation,
+		Projectiles: make([]*Projectile, 0),
 	}
 }
 
@@ -92,6 +96,16 @@ func (o *Object) UpdatePosition(diff numerics.Vec2) {
 	o.Position = o.Position.Add(diff)
 	o.Center = o.Center.Add(diff)
 	o.AABB.UpdatePosition(diff)
+}
+
+func (o *Object) FireProjectile(direction numerics.Vec2, img *animation.Image) {
+	// Make sure the direction is a normal vector
+	direction = direction.Normalized()
+
+	// Create a new projectile
+	p := NewProjectile(o, direction, img)
+
+	o.Projectiles = append(o.Projectiles, p)
 }
 
 func (o *Object) Render(screen *ebiten.Image, cameraTransform *ebiten.GeoM) {
